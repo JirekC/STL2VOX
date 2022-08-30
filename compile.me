@@ -1,0 +1,13 @@
+type:
+export CPLUS_INCLUDE_PATH=~/lib
+
+only once: from glad library directory:
+cc -c *.c -I./
+will make object files
+
+from GL_test directory:
+g++ -c STL2VOX.cpp -I./
+g++ -c f3d/*.cpp -I./
+
+link it together: from GL_test directory:
+g++ -o STL2VOX.exe *.o ~/lib/glad/*.o ~/lib/GLFW/libglfw3dll.a
