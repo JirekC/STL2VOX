@@ -30,11 +30,12 @@ namespace f3d {
         glm::vec4 _color;
 
 		// OpenGL
-		shader* _shader;
+		shader* _shader = nullptr;
 		unsigned int vao; // Vertex Array Object ID
-		unsigned int buff[2]; // vertices, normals
+		unsigned int buff[2] = {0, 0}; // vertices, normals
 	    size_t nr_of_vertices = 0; // total nr of vertices in final model
 
+        object3d() {}
 		object3d(shader& object_shader) { _shader = &object_shader; }
 
 		object3d(   shader& object_shader,
@@ -48,7 +49,7 @@ namespace f3d {
 			Prepare(model, translation, rotation, scale, color);
 		}
 
-        ~object3d() { glDeleteBuffers(2, buff); }
+        ~object3d() { /*glDeleteBuffers(2, buff);*/ }
 
         /**
          * @brief Loads model's data to GPU

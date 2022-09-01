@@ -10,7 +10,14 @@
             "request": "launch",
             "program": "${workspaceFolder}/STL2VOX.exe",
             "preLaunchTask": "C/C++: compile all",
-            "args": [],
+            "args": [
+                "../two_obj.stl",
+                "-sx512",
+                "5",
+                "-sy512",
+                "-sz256",
+                "-o../GL_test/scene.ui8"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

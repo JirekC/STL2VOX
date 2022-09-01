@@ -110,6 +110,9 @@ void object3d::Prepare( object_3d_vi* model,
 
 void object3d::Draw(const glm::mat4& view_matrix, const glm::vec3& light_pos)
 {
+    if(_shader == nullptr)
+        return;
+    
     _shader->use();
     // Create transformationmatrix from rotation, size and position(translation)
     // than multiply with view_matrix before pass to GPU
