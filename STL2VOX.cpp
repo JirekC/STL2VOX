@@ -32,6 +32,7 @@ int main(int argc, char** argv)
 {
     vector<f3d::layer_t> layers;
 	auto sc_size = glm::vec3({-1.0f,-1.0f,-1.0f});
+	auto obj_size = glm::vec3({0.0f, 0.0f, 0.0f});
 	string out_file_name = "scene.ui8"; // default output name, if not overriden by -o argument
     string in_file_tmp;
     uint8_t name_or_mat = 0; // input file name or material #
@@ -149,7 +150,7 @@ int main(int argc, char** argv)
     for(int i = 0; i < layers.size(); i++)
     {
         layers[i].object._shader = &object_shader;
-        layers[i].object.Prepare(f3d::loader::LoadSTL(layers[i].in_file_name.c_str()),{0,0,0},{0,0,0},{1,1,1},
+        layers[i].object.Prepare(f3d::loader::LoadSTL(layers[i].in_file_name.c_str(), &obj_size),{0,0,0},{0,0,0},{1,1,1},
                                     {(float)layers[i].material_nr / 256.0f, 0,0,1}); // material # in RED channel
         // create a color atachment texture
         glGenTextures(1, &(layers[i].tex_color_buff));
@@ -223,11 +224,12 @@ int main(int argc, char** argv)
 	uint8_t* out_buf = new uint8_t[out_buf_size]; // one slice X * Y * 1 Byte
 	try
 	{	
-		for(uint32_t slice = 0; slice < (uint32_t)sc_size.z; slice++)
+		for(uint32_t slice = 1; slice <= (uint32_t)sc_size.z; slice++)
 		{
             glBindFramebuffer(GL_FRAMEBUFFER, fbo); // TODO: remove? binded above
             // calculate view matrix (orthographic) for given slice
-            glm::mat4 view_mat = glm::ortho(0.0f, sc_size.x, 0.0f, sc_size.y, -(float)slice, -sc_size.z);
+			// for Z coord used maximal size of objects, not scene because object must be "closed" on far-end
+            glm::mat4 view_mat = glm::ortho(0.0f, sc_size.x, 0.0f, sc_size.y, -(float)slice, -obj_size.z - 1.0f);
 
             // draw layer-per-layer to individual textures
             for(int layer = 0; layer < layers.size(); layer++)

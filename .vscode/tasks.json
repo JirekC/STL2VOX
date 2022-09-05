@@ -9,7 +9,7 @@
 				"-fdiagnostics-color=always",
 				"-g",
 				"*.cpp",
-				"f3d/*.cpp",
+				"../lib/f3d/*.cpp",
 				"../lib/glad/*.o",
 				"../lib/GLFW/libglfw3dll.a",
 				"-o",
