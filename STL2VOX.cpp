@@ -1,3 +1,4 @@
+#include <unistd.h> // readlink()
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -27,9 +28,20 @@ void PrintHelpExit()
 	exit(-1);
 }
 
+std::string getexepath()
+{
+    char result[ 1024 ];
+    ssize_t count = readlink( "/proc/self/exe", result, sizeof(result) );
+    std::string path( result, (count > 0) ? count : 0 );
+    size_t found = path.find_last_of("/\\");
+    path = path.substr(0,found);
+    return path;
+}
+
 // main entry :)
 int main(int argc, char** argv)
 {
+    std::string exec_path = getexepath(); // path to executalble of this process
     vector<f3d::layer_t> layers;
 	auto sc_size = glm::vec3({-1.0f,-1.0f,-1.0f});
 	auto obj_size = glm::vec3({0.0f, 0.0f, 0.0f});
@@ -121,8 +133,8 @@ int main(int argc, char** argv)
     }
 
 	// show some info
-	cout << "\nScene size:\nx: " << to_string((uint32_t)sc_size.x) << "\ny: ";
-	cout << to_string((uint32_t)sc_size.y) << "\nz: " << to_string((uint32_t)sc_size.z) << "\n";
+	// cout << "\nScene size:\nx: " << to_string((uint32_t)sc_size.x) << "\ny: ";
+	// cout << to_string((uint32_t)sc_size.y) << "\nz: " << to_string((uint32_t)sc_size.z) << "\n";
 
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -145,25 +157,30 @@ int main(int argc, char** argv)
 		return -1;
 	}
 	
-	f3d::shader object_shader("f3d/vertex_object_voxmap.glsl", "f3d/fragment_object_voxmap.glsl");
+	f3d::shader object_shader((exec_path + "/f3d/vertex_object_voxmap.glsl").c_str(), (exec_path + "/f3d/fragment_object_voxmap.glsl").c_str());
     // for all layers: add ptr to shader above, load STL file & create texture object
-    for(int i = 0; i < layers.size(); i++)
-    {
-        layers[i].object._shader = &object_shader;
-        layers[i].object.Prepare(f3d::loader::LoadSTL(layers[i].in_file_name.c_str(), &obj_size),{0,0,0},{0,0,0},{1,1,1},
-                                    {(float)layers[i].material_nr / 256.0f, 0,0,1}); // material # in RED channel
-        // create a color atachment texture
-        glGenTextures(1, &(layers[i].tex_color_buff));
-        glBindTexture(GL_TEXTURE_2D, layers[i].tex_color_buff);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sc_size.x, sc_size.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL); // don't fill any data, render will :)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    try {
+        for(int i = 0; i < layers.size(); i++)
+        {
+            layers[i].object._shader = &object_shader;
+            layers[i].object.Prepare(f3d::loader::LoadSTL(layers[i].in_file_name.c_str(), &obj_size),{0,0,0},{0,0,0},{1,1,1},
+                                        {(float)layers[i].material_nr / 256.0f, 0,0,1}); // material # in RED channel
+            // create a color atachment texture
+            glGenTextures(1, &(layers[i].tex_color_buff));
+            glBindTexture(GL_TEXTURE_2D, layers[i].tex_color_buff);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sc_size.x, sc_size.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL); // don't fill any data, render will :)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
     }
-
+    catch(exception& e) {
+        std::cerr << e.what();
+        return -1;
+    }
     // final layered stack
-	f3d::shader layer_shader("f3d/vertex_layers.glsl", "f3d/fragment_layers.glsl");
+	f3d::shader layer_shader((exec_path + "/f3d/vertex_layers.glsl").c_str(), (exec_path + "/f3d/fragment_layers.glsl").c_str());
     f3d::layer_stack final_stack(layer_shader, sc_size, layers);
 
     // create new framebuffer
