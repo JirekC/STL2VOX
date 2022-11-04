@@ -23,7 +23,8 @@ void PrintHelpExit()
 	cerr << "\nCorrect usage:\n";
 	cerr << "STL2VOX IN_FILE MATERIAL_NUMBER [IN_FILE2 MATERIAL_NUMBER2] ... -sxSIZE_X sySIZEY -szSIZE_Z [-oOUT_FILE]\n";
 	cerr << "MAT_NUMBER (following each input file) must be integer <0 .. 255> #1 used otherwise\n";
-	cerr << "-sx, -sy, -sz: total scene size in each dimmension (in elements), positive integer value\n";
+	cerr << "-sx, -sy, -sz: total scene size in each dimmension (in simulation elements), positive integer value\n";
+	cerr << "-dx length of edge of simulation-element (cubic element) in [m], positive value\n";
 	cerr << "\n";
 	exit(-1);
 }
@@ -43,6 +44,7 @@ int main(int argc, char** argv)
 {
     std::string exec_path = getexepath(); // path to executalble of this process
     vector<f3d::layer_t> layers;
+    float dx = 0; // single element (voxel) size in [m]
 	auto sc_size = glm::vec3({-1.0f,-1.0f,-1.0f});
 	auto obj_size = glm::vec3({0.0f, 0.0f, 0.0f});
 	string out_file_name = "scene.ui8"; // default output name, if not overriden by -o argument
@@ -76,7 +78,8 @@ int main(int argc, char** argv)
                         sc_size.z = (uint32_t)stol(&argv[i][3]);
                         break;
                     default:
-                        throw runtime_error("Unknown argument" + string(argv[i]));
+                        cerr << "\nUnknown argument \"" << string(argv[i]) << "\"\n";
+                        PrintHelpExit();
                         break;
                     }
                 }
@@ -91,9 +94,13 @@ int main(int argc, char** argv)
             {
                 out_file_name = &argv[i][2];
             }
+            else if(argv[i][1] == 'd' && argv[i][2] == 'x')
+            {
+                dx = stod(&argv[i][3]);
+            }
             else
             {
-                cerr << "\nUnknown argument" << string(argv[i]) << "\n";
+                cerr << "\nUnknown argument \"" << string(argv[i]) << "\"\n";
                 PrintHelpExit();
             }
         }
@@ -132,6 +139,12 @@ int main(int argc, char** argv)
         PrintHelpExit();
     }
 
+    if(dx <= 0.0)
+    {
+        cerr << "Space step (size of simulation element) must be positive but is " << to_string(dx) << "\n";
+        PrintHelpExit();
+    }
+
 	// show some info
 	// cout << "\nScene size:\nx: " << to_string((uint32_t)sc_size.x) << "\ny: ";
 	// cout << to_string((uint32_t)sc_size.y) << "\nz: " << to_string((uint32_t)sc_size.z) << "\n";
@@ -163,8 +176,12 @@ int main(int argc, char** argv)
         for(int i = 0; i < layers.size(); i++)
         {
             layers[i].object._shader = &object_shader;
-            layers[i].object.Prepare(f3d::loader::LoadSTL(layers[i].in_file_name.c_str(), &obj_size),{0,0,0},{0,0,0},{1,1,1},
-                                        {(float)layers[i].material_nr / 256.0f, 0,0,1}); // material # in RED channel
+            layers[i].object.Prepare(f3d::loader::LoadSTL(layers[i].in_file_name.c_str(), &obj_size),
+                                    {0,0,0},
+                                    {0,0,0},
+                                    {1.0/dx, 1.0/dx, 1.0/dx}, // scale used for conversion from meters to simulation-units
+                                    {(float)layers[i].material_nr / 256.0f, 0.0,0.0,1.0}); // material # in RED channel
+            obj_size *= 1.0 / dx; // from meters to simulation-units
             // create a color atachment texture
             glGenTextures(1, &(layers[i].tex_color_buff));
             glBindTexture(GL_TEXTURE_2D, layers[i].tex_color_buff);
